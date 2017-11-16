@@ -1,32 +1,23 @@
 ;
 ; file: asm_main.asm
 
-
 %include "asm_io.inc"
 ;
 ; initialized data is put in the .data segment
 ;
+
 segment .data
-        syswrite: equ 4
-        stdout: equ 1
-        exit: equ 1
-        SUCCESS: equ 0
-        kernelcall: equ 80h
-	
-	prompt1	db	"What is the base of the array:", 0
-	prompt2 db	"What is the length of the array:" ,0
-	prompt3	db	"What is the scalar:", 0
-	
-	myArray	times 100 db 1 ;creates an aray of 100 0's
+
+	prompt1	db	"What is the size of the array?:",0
+	prompt2	db	"What is the scalar of the array?", 0
 
 ; uninitialized data is put in the .bss segment
 ;
 segment .bss
 
-	array_size	resd 1 	;i.e my_array[array_size] (in c)
-	array_base	resd 1	;i.e my_array = [base, base*2, base*3, base*4, base*5...]
-	array_scalar	resd 1	;i.e my_second_array = [base*scalar, base*2*sclar, base*3*sclar...]
-
+	array_in_len	resd	1
+	array_in_sca	resd	1
+;
 ; code is put in the .text segment
 ;
 segment .text
@@ -34,93 +25,104 @@ segment .text
 asm_main:
         enter   0,0               ; setup routine
         pusha
-; *********** Start  Assignment Code *******************
+; next print out result message as series of steps
 
 	push	prompt1
 	pop	eax
-	call	print_string	;mov string into eax and call
-	call	read_int	;array base should be in eax now
-b1:
-	mov	[array_base], eax
-	and	eax, 0
-
-	push	prompt3
-	pop 	eax
 	call	print_string
 	call	read_int
-
-	mov	[array_scalar], eax
-	and	eax, 0
-b2:
-
+b1:
+	push	eax
+	
 	push	prompt2
 	pop	eax
 	call	print_string
 	call	read_int
-	mov	[array_size], eax
-	and	eax, 0
+b2:
+	push	eax
 
-	push	myArray
+	mov	edx,return1
+	push	edx
 
+	call	arrayFunc
+return1:
 
-	;mov	eax, [array_size]
-	;call	print_int
-	;call	print_nl	
-;
-	;mov	eax, [array_base]
-	;call	print_int
-	;call	print_nl
-;
-	
-	;mov	eax, [array_scalar]
-	;call	print_int
-	;call	print_nl
-	
-;        popa
- ;       mov     eax, SUCCESS       ; return back to the C program
-  ;      leave                     
-   ;     ret
-
-
-create_array:
-;	enter	0,0
-	
+	;return the stack to the original state it was before the program
 	pop	eax
-	mov	ecx, [array_size]
-					
-	mov	ebx, [array_scalar]
-b3:
-	mov	esi, eax
-	mov	edi, eax
-	push 	eax
-
-;	mov	esi, [ebp+8]
-;	mov	edi, [ebp+8]
 	
-	start_loop:
-b4:
-		lodsw
-		;mul	ebx
-		stosw
-		loop	start_loop	
-	
-	end_loop:
-
-	mov	ecx, [array_size]
-	pop	eax	
-	mov	esi, eax 
-	print_array:
-		lodsw
-		movsx	eax, ax
-		call	print_int
-		call	print_nl
-		loop	print_array
-	
-; *********** End Assignment Code **********************
 
         popa
-        mov     eax, SUCCESS       ; return back to the C program
-        leave                     
+        mov     eax, 0            ; return back to C
+        leave
         ret
 
+segment .data
 
+segment .bss
+
+array_size	resd	1
+array_scalar	resd	1
+
+array	resd	1	;create an array of uninitalized size that is a reserved doubleword
+	
+segment .text
+
+arrayFunc:
+	pop	ebx ;place the return address here
+
+	pop	eax ;mov the scalar into eax
+	pop	eax
+;	call	print_int
+;	call	print_nl
+	mov	[array_scalar], eax
+b3:
+	pop	eax	;mov the array size into eax to be stored into the value later
+;	call	print_int
+;	call	print_nl
+	mov	[array_size], eax
+b4:
+	xor	eax, eax	;0 out eax
+	push	ebx
+	
+	mov	ecx, [array_size]	;place the array size into ecx
+	mov	ebx, array	;mov the starting location of the array into ebx
+b5:
+
+	cmp	ecx, 0
+	js	end_create
+
+create_array:
+	mov	[ebx+4*ecx], ecx ;mov the value of ecx (the array size from the top to bottom)
+	mov	al, [ebx+4*ecx]	;mov the value into al to be printed
+	call	print_int
+	call	print_nl
+	loop	create_array
+end_create:
+	call	print_nl
+	call	print_nl
+	and	eax, 0
+	and	ebx, 0
+	and	ecx, 0
+	and	edx, 0
+
+scale_array:
+	mov	ebx, array
+	mov	ecx, [array_size]
+
+	cmp	ecx, 0
+	js	end_scale_loop
+
+scale_loop:
+	mov	eax, [array_scalar]
+	mov	dl, [ebx+4*ecx]
+	mul	dl
+	mov	[ebx+4*ecx], eax
+	call	print_int
+	call	print_nl
+b6:
+	loop	scale_loop
+	
+end_scale_loop:
+
+	pop	ebx
+	jmp	ebx
