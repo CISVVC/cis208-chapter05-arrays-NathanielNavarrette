@@ -1,2 +1,3 @@
 # Description
-This is template code that can be used for all assembly language assignments in the CIS208 Machine Organization and Architecture class at Victor Valley College
+Chapter 5 assignment. A program that takes in the size of the array and the scalar.
+Creates the array of size n, then takes 1-n and scales it to the scalar (i.e 1*scalar, 2*scalar...)
